@@ -102,7 +102,7 @@ export default function App() {
           theme === 'dark' ? "opacity-40 grayscale-0 brightness-90" : "opacity-85 grayscale-0 brightness-105"
         )}
         style={{ 
-          backgroundImage: 'url("/bison-nature-black-white.jpg")',
+          backgroundImage: 'url("bison-nature-black-white.jpg")',
         }}
       />
       
