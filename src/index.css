@@ -1,0 +1,86 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&family=Cairo:wght@400;700;900&family=Amiri:wght@400;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Outfit", "Cairo", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  --font-arabic: "Amiri", serif;
+  
+  --color-cattle-green: var(--cattle-green);
+  --color-cattle-blue: var(--cattle-blue);
+  --color-cattle-purple: var(--cattle-purple);
+  --color-cattle-amber: var(--cattle-amber);
+  --color-cattle-black: var(--cattle-black);
+  --color-cattle-gray: var(--cattle-gray);
+  --color-cattle-border: var(--cattle-border);
+  --color-cattle-text: var(--cattle-text);
+}
+
+:root {
+  --cattle-black: #020617;
+  --cattle-gray: #0f172a;
+  --cattle-border: #1e293b;
+  --cattle-text: #f8fafc;
+  --cattle-green: #10b981;
+  --cattle-blue: #06b6d4;
+  --cattle-purple: #8b5cf6;
+  --cattle-amber: #f59e0b;
+}
+
+[data-theme="light"] {
+  --cattle-black: #f8fafc;
+  --cattle-gray: #f1f5f9;
+  --cattle-border: #e2e8f0;
+  --cattle-text: #0f172a;
+  --cattle-green: #059669;
+  --cattle-blue: #0891b2;
+  --cattle-purple: #7c3aed;
+  --cattle-amber: #d97706;
+}
+
+@layer base {
+  [dir="rtl"] .font-black, [dir="rtl"] .font-bold {
+    @apply font-black; /* Cairo black is very strong */
+  }
+
+  body {
+    @apply bg-cattle-black text-cattle-text font-sans transition-colors duration-300;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-bold tracking-tight uppercase;
+  }
+}
+
+@layer components {
+  .brutal-border {
+    @apply border border-cattle-border hover:border-cattle-green transition-colors;
+  }
+  
+  .brutal-card {
+    @apply bg-cattle-gray/80 border border-cattle-border p-6 rounded-none backdrop-blur-sm;
+  }
+  
+  .brutal-button {
+    @apply bg-white text-black font-bold py-3 px-6 uppercase tracking-widest text-[10px] hover:bg-cattle-green hover:text-black transition-all active:scale-[0.98];
+  }
+  
+  .glass-blur {
+    @apply backdrop-blur-md bg-cattle-black/80 border-b border-cattle-border;
+  }
+
+  .corner-decor {
+    @apply relative overflow-hidden;
+  }
+  
+  .corner-decor::before {
+    content: '';
+    @apply absolute top-0 left-0 w-3 h-3 border-t border-l border-cattle-green;
+  }
+  
+  .corner-decor::after {
+    content: '';
+    @apply absolute bottom-0 right-0 w-3 h-3 border-b border-r border-cattle-green;
+  }
+}
+
