@@ -20,8 +20,8 @@ IMG_SIZE   = (224, 224)
 TOP_K      = 5
 
 def load_model_and_labels():
-    model_path  = os.path.join(OUTPUT_DIR, "cattle_model.h5")
-    labels_path = os.path.join(OUTPUT_DIR, "labels.json")
+    model_path  = os.path.join("cattle_model.h5")
+    labels_path = os.path.join("labels.json")
 
     if not os.path.exists(model_path):
         print("[✗] النموذج غير موجود. شغّل train.py أولاً.")
