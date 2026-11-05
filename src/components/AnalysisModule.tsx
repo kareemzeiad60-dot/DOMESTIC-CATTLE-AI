@@ -16,12 +16,38 @@ interface AnalysisModuleProps {
 async function getApiBase(): Promise<string> {
   const env = (import.meta as any).env || {};
   if (env.VITE_API_URL) return String(env.VITE_API_URL).replace(/\/$/, '');
-  const file = env.VITE_BACKEND_URL_FILE ||
-    'https://raw.githubusercontent.com/kareemzeiad60-dot/DOMESTIC-CATTLE-AI/backend-url/api-url.json';
-  const r = await fetch(`${file}?t=${Date.now()}`, { cache: 'no-store' });
-  if (!r.ok) throw new Error('Backend is offline (no API URL published yet).');
-  const { url } = await r.json();
-  return String(url).replace(/\/$/, '');
+  const repo = 'kareemzeiad60-dot/DOMESTIC-CATTLE-AI';
+  const sources = [
+    env.VITE_BACKEND_URL_FILE,
+    `https://raw.githubusercontent.com/${repo}/backend-url/api-url.json`,
+    `https://cdn.jsdelivr.net/gh/${repo}@backend-url/api-url.json`,
+  ].filter(Boolean) as string[];
+  let last = 'unknown';
+  for (const f of sources) {
+    try {
+      const r = await fetch(`${f}${f.includes('?') ? '&' : '?'}t=${Date.now()}`, { cache: 'no-store' });
+      if (!r.ok) { last = `${f} -> HTTP ${r.status}`; continue; }
+      const { url } = await r.json();
+      if (url) return String(url).replace(/\/$/, '');
+    } catch (e: any) { last = `${f} -> ${e?.message || e}`; }
+  }
+  throw new Error(`STAGE1: cannot read backend address (${last})`);
+}
+
+// يصغّر الصورة قبل الإرسال (أسرع وأخف على التونل)
+function shrinkImage(dataUrl: string, max = 1024): Promise<string> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const k = Math.min(1, max / Math.max(img.width, img.height));
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+      c.getContext('2d')!.drawImage(img, 0, 0, c.width, c.height);
+      resolve(c.toDataURL('image/jpeg', 0.9));
+    };
+    img.onerror = () => resolve(dataUrl);
+    img.src = dataUrl;
+  });
 }
 
 export default function AnalysisModule({ onAnalysisComplete, lang, theme }: AnalysisModuleProps) {
@@ -54,18 +80,25 @@ export default function AnalysisModule({ onAnalysisComplete, lang, theme }: Anal
     setErrorDetail(null);
 
     try {
-      const response = await fetch(`${await getApiBase()}/api/analyze`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept-Language': lang === 'ar' ? 'ar' : 'en'
-        },
-        body: JSON.stringify({ image: preview })
-      });
+      const base = await getApiBase();
+      const small = await shrinkImage(preview);
+      let response: Response;
+      try {
+        response = await fetch(`${base}/api/analyze`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept-Language': lang === 'ar' ? 'ar' : 'en'
+          },
+          body: JSON.stringify({ image: small })
+        });
+      } catch (e: any) {
+        throw new Error(`STAGE2: cannot reach backend ${base} (${e?.message || e}). The backend may be restarting or blocked by your network.`);
+      }
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || "SERVER_ERROR");
+        throw new Error(errorData.error || `HTTP ${response.status} from backend`);
       }
 
       const jsonResult = await response.json();
@@ -82,12 +115,8 @@ export default function AnalysisModule({ onAnalysisComplete, lang, theme }: Anal
     } catch (err: any) {
       console.error(err);
       const isKnownError = err.message !== "SERVER_ERROR" && err.message !== "Failed to fetch";
-      setError(isKnownError ? "Analysis Failed" : "System Integrity Error");
-      setErrorDetail(err.message === "SERVER_ERROR" 
-        ? "The local analysis engine encountered a technical fault. Please check model availability."
-        : err.message === "Failed to fetch"
-        ? "Local database sync failed. Verify engine runtime status."
-        : err.message);
+      setError("Analysis Failed");
+      setErrorDetail(String(err.message || err));
     } finally {
       setIsAnalyzing(false);
     }
