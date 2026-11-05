@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: cattle-ai-backend
+    runtime: docker
+    dockerContext: ./bot
+    dockerfilePath: ./bot/Dockerfile
+    plan: free
+    healthCheckPath: /api/health
+    envVars:
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: ALLOWED_ORIGINS
+        value: "*"

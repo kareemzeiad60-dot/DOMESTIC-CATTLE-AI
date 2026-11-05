@@ -42,7 +42,7 @@ export default function AnalysisModule({ onAnalysisComplete, lang, theme }: Anal
     setErrorDetail(null);
 
     try {
-      const response = await fetch('/api/analyze', {
+      const response = await fetch(`${(import.meta as any).env?.VITE_API_URL || ''}/api/analyze`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

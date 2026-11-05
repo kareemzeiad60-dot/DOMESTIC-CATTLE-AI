@@ -2,3 +2,5 @@ python-telegram-bot==21.6
 tensorflow-cpu>=2.16
 pillow
 numpy
+fastapi
+uvicorn[standard]
