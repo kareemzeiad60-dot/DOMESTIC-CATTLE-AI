@@ -95,6 +95,10 @@ export default function App() {
 
   return (
     <div className="flex h-screen bg-cattle-black overflow-hidden selection:bg-cattle-green selection:text-black relative">
+      <a href={(import.meta as any).env?.VITE_BOT_URL || 'https://t.me/'} target="_blank" rel="noreferrer"
+         className="fixed bottom-4 right-4 z-50 bg-cattle-green text-black font-bold px-4 py-3 text-sm uppercase tracking-wider">
+        ✈ Telegram Bot
+      </a>
       {/* Background Image Overlay */}
       <div 
         className={cn(
