@@ -1,0 +1,75 @@
+name: Backend (Telegram bot + API)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["main"]
+    paths: ["bot/**", ".github/workflows/bot.yml"]
+  schedule:
+    - cron: "0 */5 * * *"   # إعادة تشغيل كل 5 ساعات (حد GitHub للـ job هو 6 ساعات)
+
+# نسخة واحدة بس، والجديدة بتحل محل القديمة
+concurrency:
+  group: backend
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: bot/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r bot/requirements.txt
+
+      - name: Start backend (API + Telegram bot)
+        working-directory: bot
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        run: |
+          nohup uvicorn app:app --host 127.0.0.1 --port 7860 > /tmp/api.log 2>&1 &
+          for i in $(seq 1 90); do
+            curl -sf http://127.0.0.1:7860/api/health && break
+            sleep 2
+          done
+          curl -sf http://127.0.0.1:7860/api/health || { cat /tmp/api.log; exit 1; }
+
+      - name: Open public tunnel
+        run: |
+          curl -sL -o cloudflared https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64
+          chmod +x cloudflared
+          nohup ./cloudflared tunnel --no-autoupdate --url http://127.0.0.1:7860 > /tmp/tunnel.log 2>&1 &
+          for i in $(seq 1 30); do
+            URL=$(grep -o 'https://[a-z0-9-]*\.trycloudflare\.com' /tmp/tunnel.log | head -1)
+            [ -n "$URL" ] && break
+            sleep 2
+          done
+          [ -n "$URL" ] || { cat /tmp/tunnel.log; exit 1; }
+          echo "API URL: $URL"
+          echo "API_URL=$URL" >> "$GITHUB_ENV"
+
+      - name: Publish API URL for the website
+        run: |
+          mkdir /tmp/pub && cd /tmp/pub
+          echo "{\"url\":\"$API_URL\",\"updated\":\"$(date -u +%FT%TZ)\"}" > api-url.json
+          git init -q -b backend-url
+          git config user.name "github-actions"; git config user.email "actions@github.com"
+          git add api-url.json && git commit -qm "update api url"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" backend-url
+
+      - name: Keep running
+        run: |
+          # يفضل شغال لحد ما الـ job يتقفل أو يتلغي
+          while pgrep -f "uvicorn app:app" > /dev/null; do sleep 30; done
+          cat /tmp/api.log
+          exit 1

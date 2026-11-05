@@ -12,6 +12,18 @@ interface AnalysisModuleProps {
   theme: 'dark' | 'light';
 }
 
+// يجيب رابط الباك إند: من VITE_API_URL، أو من api-url.json اللي الـ GitHub Action بينشره
+async function getApiBase(): Promise<string> {
+  const env = (import.meta as any).env || {};
+  if (env.VITE_API_URL) return String(env.VITE_API_URL).replace(/\/$/, '');
+  const file = env.VITE_BACKEND_URL_FILE ||
+    'https://raw.githubusercontent.com/kareemzeiad60-dot/DOMESTIC-CATTLE-AI/backend-url/api-url.json';
+  const r = await fetch(`${file}?t=${Date.now()}`, { cache: 'no-store' });
+  if (!r.ok) throw new Error('Backend is offline (no API URL published yet).');
+  const { url } = await r.json();
+  return String(url).replace(/\/$/, '');
+}
+
 export default function AnalysisModule({ onAnalysisComplete, lang, theme }: AnalysisModuleProps) {
   const t = translations[lang];
   const [file, setFile] = useState<File | null>(null);
@@ -42,7 +54,7 @@ export default function AnalysisModule({ onAnalysisComplete, lang, theme }: Anal
     setErrorDetail(null);
 
     try {
-      const response = await fetch(`${(import.meta as any).env?.VITE_API_URL || ''}/api/analyze`, {
+      const response = await fetch(`${await getApiBase()}/api/analyze`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
